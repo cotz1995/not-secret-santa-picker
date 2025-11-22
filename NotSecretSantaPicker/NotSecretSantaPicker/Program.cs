@@ -79,7 +79,7 @@
 				var remainingPeople = people.Select(x => x).ToList();
 				for (int i = 0; i < people.Count; i++)
 				{
-					var santa = PickSanta(people, remainingPeople, i);
+					var santa = PickSanta(people, remainingPeople, santaAssignments, i);
 					// invalid result - bail
 					if (santa == null)
 						break;
@@ -91,12 +91,15 @@
 				{
 					successfulResult = true;
 				}
+
+				var resultWord = successfulResult ? "successful" : "unsuccessful";
+                Console.WriteLine($"Attempt was {resultWord}");
 			}
 
 			return santaAssignments;
 		}
 
-		private static SantaAssignment? PickSanta(List<Person> people, List<Person> remainingPeople, int i)
+		private static SantaAssignment? PickSanta(List<Person> people, List<Person> remainingPeople, List<SantaAssignment> santaAssignments, int i)
 		{
 			var random = new Random(Guid.NewGuid().GetHashCode());
 
@@ -110,14 +113,14 @@
 					return null;
 				}
 				
-				// if the only remaining people are significant others, bail invalid solution
-				if (remainingPeople.Count < 3 && IsSignificantOther(people[i], remainingPeople[index]))
+				// if the only remaining people are not a valid assignment, bail
+				if (remainingPeople.Count < 3 && !IsValidSantaAssignment(people[i], remainingPeople[index], santaAssignments))
 				{
 					return null;
 				}
 
-				// if the recipient and santa are different people and not significant others, valid ship it
-				if (people[i] != remainingPeople[index] && !IsSignificantOther(people[i], remainingPeople[index]))
+				// if the recipient and santa are different people and is a valid assignment, ship it
+				if (people[i] != remainingPeople[index] && IsValidSantaAssignment(people[i], remainingPeople[index], santaAssignments))
 				{
 					var santa = people[i];
 					var recipient = remainingPeople[index];
@@ -127,13 +130,28 @@
 					return new SantaAssignment(santaName:santa.Name, recipientName: recipient.Name);
 				}
 			} while (true);
-				
+		}
 
+		private static bool IsValidSantaAssignment(Person potentialSanta, Person potentialRecipient, List<SantaAssignment> santaAssignments)
+		{
+			return !IsSignificantOther(potentialSanta, potentialRecipient) && !IsBidirectionalAssignment(potentialSanta, potentialRecipient, santaAssignments);
 		}
 
 		private static bool IsSignificantOther(Person personA, Person personB)
 		{
 			return personA.SignificantOther == personB.Name;
+		}
+
+		/// <summary>
+		/// determins if the potential assignment will result in a bidirectional santa relationship
+		/// </summary>
+		/// <param name="potentialSanta"></param>
+		/// <param name="potentialRecipient"></param>
+		/// <param name="santaAssignments"></param>
+		/// <returns></returns>
+		private static bool IsBidirectionalAssignment(Person potentialSanta, Person potentialRecipient, List<SantaAssignment> santaAssignments)
+		{
+			return santaAssignments.Any(x => x.SantaName == potentialRecipient.Name && x.RecipientName == potentialSanta.Name);
 		}
 	}
 }
